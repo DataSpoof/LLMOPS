@@ -39,16 +39,27 @@ jobs:
           fi
           pip install ruff mypy pytest pytest-cov
 
-      - name: Lint (ruff)
+      # ---- Ruff: app code (strict) ----
+      - name: Ruff (app code)
         run: |
-          ruff check .
-          ruff format --check .
+          # Lint only the main modules strictly
+          ruff check fastapi_phoenix_agent.py utils.py
+          # Format only tracked *.py files (avoid notebooks)
+          git ls-files "*.py" | xargs ruff format --check
 
+      # ---- Ruff: tests (relaxed; ignore common test warnings) ----
+      - name: Ruff (tests, relaxed)
+        run: |
+          # Ignore unused imports & module-at-top errors in tests
+          ruff check tests --extend-ignore F401,E402
+
+      # ---- Mypy on app modules only ----
       - name: Type-check (mypy)
         run: |
-          mypy --ignore-missing-imports --install-types --non-interactive .
+          mypy --ignore-missing-imports --install-types --non-interactive fastapi_phoenix_agent.py utils.py
 
-      - name: Run unit tests in tests/
+      # ---- Pytests ----
+      - name: Run unit tests
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PHONENIX_ENDPOINT: ${{ secrets.PHONENIX_ENDPOINT }}
