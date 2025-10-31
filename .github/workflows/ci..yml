@@ -27,7 +27,7 @@ jobs:
           uv pip install pytest
       - name: Run tests
         env:
-          PYTHONPATH: ${{ github.workspace }}
+          PYTHONPATH: ${{ github.workspace }}/Notebooks
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PHONENIX_ENDPOINT: ${{ secrets.PHONENIX_ENDPOINT }}
         run: |
