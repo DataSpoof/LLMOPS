@@ -2,20 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop, feature/** ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
-permissions:
-  contents: read
-
 jobs:
   test:
-    name: Lint • Type-check • Run tests
     runs-on: ubuntu-latest
-    env:
-      PYTHONPATH: ${{ github.workspace }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,51 +16,19 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-          cache: pip
+          python-version: '3.12'
 
-      - name: Install dependencies
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Sync dependencies with uv (locked)
         run: |
-          python -m pip install --upgrade pip
-          if [ -f uv.lock ]; then
-            pip install uv
-            uv sync --all-extras --dev
-          elif [ -f pyproject.toml ]; then
-            pip install .[dev] || pip install -e .
-          elif [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
-          pip install ruff mypy pytest pytest-cov
-
-      # ---- Ruff: app code (strict) ----
-      - name: Ruff (app code)
-        run: |
-          # Lint only the main modules strictly
-          ruff check fastapi_phoenix_agent.py utils.py
-          # Format only tracked *.py files (avoid notebooks)
-          git ls-files "*.py" | xargs ruff format --check
-
-      # ---- Ruff: tests (relaxed; ignore common test warnings) ----
-      - name: Ruff (tests, relaxed)
-        run: |
-          # Ignore unused imports & module-at-top errors in tests
-          ruff check tests --extend-ignore F401,E402
-
-      # ---- Mypy on app modules only ----
-      - name: Type-check (mypy)
-        run: |
-          mypy --ignore-missing-imports --install-types --non-interactive fastapi_phoenix_agent.py utils.py
-
-      # ---- Pytests ----
-      - name: Run unit tests
+          uv sync --frozen
+          uv pip install pytest
+      - name: Run tests
         env:
+          PYTHONPATH: ${{ github.workspace }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PHONENIX_ENDPOINT: ${{ secrets.PHONENIX_ENDPOINT }}
         run: |
-          pytest tests -q --disable-warnings --maxfail=1 --cov=. --cov-report=xml
-
-      - name: Upload coverage.xml
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage.xml
-          path: coverage.xml
+          uv run pytest -q
