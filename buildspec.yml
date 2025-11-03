@@ -1,0 +1,14 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - pip install --upgrade pip
+      # Not building anything heavy; EB will pip install during deploy.
+  build:
+    commands:
+      - echo "Packaging app for Elastic Beanstalk"
+artifacts:
+  files:
+    - '**/*'
