@@ -1,0 +1,40 @@
+{
+  "family": "fastapi-phoenix-agent-td",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "REPLACE_ME_EXECUTION_ROLE_ARN",
+  "taskRoleArn": "REPLACE_ME_TASK_ROLE_ARN",
+  "containerDefinitions": [
+    {
+      "name": "fastapi",
+      "image": "REPLACE_ME_IMAGE_URI",
+      "portMappings": [
+        { "containerPort": 8000, "protocol": "tcp" }
+      ],
+      "essential": true,
+      "environment": [
+        { "name": "PHONENIX_ENDPOINT", "value": "" }  // we’ll override via Secrets/SSM
+      ],
+      "secrets": [
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "REPLACE_ME_OPENAI_API_KEY_ARN_OR_PARAM"
+        },
+        {
+          "name": "PHONENIX_ENDPOINT",
+          "valueFrom": "REPLACE_ME_PHOENIX_ENDPOINT_ARN_OR_PARAM"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/fastapi-phoenix-agent",
+          "awslogs-region": "REPLACE_ME_REGION",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
