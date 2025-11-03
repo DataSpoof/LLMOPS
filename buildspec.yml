@@ -1,33 +1,16 @@
 version: 0.2
 
-env:
-  variables:
-    IMAGE_REPO_NAME: fastapi-phoenix-agent
-  parameter-store: {}   # or secrets-manager if you must read anything at build-time (usually not needed)
-
 phases:
-  pre_build:
+  install:
     commands:
-      - echo "Logging in to Amazon ECR..."
-      - aws --version
-      - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-      - REGION=${AWS_DEFAULT_REGION:-us-east-1}
-      - ECR_URI="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
-      - aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin ${ECR_URI}
-      - IMAGE_TAG=${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}
+      - echo "Install phase - nothing heavy; EB will build Docker image."
   build:
     commands:
-      - echo "Building the Docker image..."
-      - docker build -t ${IMAGE_REPO_NAME}:${IMAGE_TAG} .
-      - docker tag ${IMAGE_REPO_NAME}:${IMAGE_TAG} ${ECR_URI}/${IMAGE_REPO_NAME}:${IMAGE_TAG}
-      - docker tag ${IMAGE_REPO_NAME}:${IMAGE_TAG} ${ECR_URI}/${IMAGE_REPO_NAME}:latest
-  post_build:
-    commands:
-      - echo "Pushing the Docker image to ECR..."
-      - docker push ${ECR_URI}/${IMAGE_REPO_NAME}:${IMAGE_TAG}
-      - docker push ${ECR_URI}/${IMAGE_REPO_NAME}:latest
-      - printf '{"ImageURI":"%s"}' "${ECR_URI}/${IMAGE_REPO_NAME}:${IMAGE_TAG}" > imageDetail.json
+      - echo "Build phase - run lightweight checks"
+      - python --version
+      - pip --version
+      - echo "OK"
 artifacts:
   files:
-    - imageDetail.json
-    - ecs-taskdef.json
+    - "**/*"
+  discard-paths: no
