@@ -1,29 +1,37 @@
-# Use a slim Python base
-FROM python:3.11-slim
+# Use official Python image
+FROM python:3.12-slim
 
-# System deps (build + runtime)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential curl && \
-    rm -rf /var/lib/apt/lists/*
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Workdir
+# Set workdir
 WORKDIR /app
 
-# Copy requirements first for layer caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install OS dependencies
+RUN apt-get update && apt-get install -y build-essential poppler-utils curl && rm -rf /var/lib/apt/lists/*
 
-# Copy app code + data (optional)
-COPY fastapi_phoenix_agent.py .
-# If your app expects Sales.parquet locally, copy it. Alternatively, load from S3 at runtime instead.
-COPY Sales.parquet ./Sales.parquet
+# Install uv (Python package/dependency manager)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+ENV UV_LINK_MODE=copy
+ENV PYTHONPATH="/app:/app/Notebooks"
 
-# Expose port used by uvicorn
-EXPOSE 8000
+# Copy dependency manifests for better layer caching
+COPY requirements.txt ./
 
-# Env to make uvicorn address/port explicit
-ENV HOST=0.0.0.0
-ENV PORT=8000
+# Install dependencies into the system interpreter using uv pip
+RUN uv pip install --system -r requirements.txt
 
-# Start server
-CMD ["uvicorn", "fastapi_phoenix_agent:app", "--host", "0.0.0.0", "--port", "8000"]
+# Copy project files
+COPY . .
+
+
+# Expose port
+EXPOSE 8080
+
+# Run FastAPI with uvicorn
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
+
+# Replace last CMD in prod
+#CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4"]
